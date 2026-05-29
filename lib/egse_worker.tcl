@@ -102,7 +102,20 @@ egse::log::event info "egse-start type=[dict get $cfg egse_type] mib_set=$mibSet
 
 proc ::onTcPacket {cfg mibIndex transport endpoint rawPacket} {
     catch {
-        set decoded [egse::protocol::decodeTcPacket $rawPacket $mibIndex]
+        set binaryRc [catch {
+            set decoded [egse::protocol::decodeTcPacket $rawPacket $mibIndex]
+        } binaryErr]
+
+        if {$binaryRc != 0 || [dict get $decoded command_def] eq ""} {
+            set asciiRc [catch {
+                set decoded [egse::protocol::decodeAsciiTcPacket $rawPacket $mibIndex]
+            } asciiErr]
+
+            if {$asciiRc != 0 && $binaryRc != 0} {
+                error "binary decode failed: $binaryErr ; ascii decode failed: $asciiErr"
+            }
+        }
+
         egse::log::packet RX $transport $endpoint $rawPacket $decoded
 
         set actionResult [egse::dispatch::handleTc $decoded]

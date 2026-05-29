@@ -1,4 +1,144 @@
 namespace eval egse::protocol {
+    proc _paramName {def} {
+        foreach key {param_name name paramName} {
+            if {[dict exists $def $key]} {
+                return [dict get $def $key]
+            }
+        }
+        error "Parameter definition missing name field: $def"
+    }
+
+    proc _paramOffset {def} {
+        if {[dict exists $def offset]} {
+            return [dict get $def offset]
+        }
+        if {[dict exists $def bitOffset]} {
+            return [expr {[dict get $def bitOffset] / 8}]
+        }
+        error "Parameter definition missing offset field: $def"
+    }
+
+    proc _paramLength {def} {
+        if {[dict exists $def length]} {
+            return [dict get $def length]
+        }
+        if {[dict exists $def bitLength]} {
+            return [expr {([dict get $def bitLength] + 7) / 8}]
+        }
+        error "Parameter definition missing length field: $def"
+    }
+
+    proc _paramType {def} {
+        if {[dict exists $def type]} {
+            set type [dict get $def type]
+            if {$type in {U8 I8 U16 I16 U32 I32}} {
+                return $type
+            }
+        }
+
+        set length [_paramLength $def]
+        switch -- $length {
+            1 { return U8 }
+            2 { return U16 }
+            4 { return U32 }
+            default { return RAW }
+        }
+    }
+
+    proc _normalizeAsciiKey {text} {
+        set lower [string tolower [string trim $text]]
+        set normalized [regsub -all {[^a-z0-9]+} $lower _]
+        return [string trim $normalized _]
+    }
+
+    proc _parseAsciiKeyValues {text} {
+        set parsed [dict create]
+        set chunks [split [string map {"\r" "\n" ";" "\n" "|" "\n" "," "\n"} $text] "\n"]
+        foreach chunk $chunks {
+            set trimmed [string trim $chunk]
+            if {$trimmed eq ""} {
+                continue
+            }
+            if {![regexp {^(.*?)\s*(=|:)\s*(.*?)$} $trimmed -> rawKey _ rawValue]} {
+                continue
+            }
+            set key [_normalizeAsciiKey $rawKey]
+            if {$key eq ""} {
+                continue
+            }
+            set value [string trim $rawValue " \t\n\r\"'"]
+            dict set parsed $key $value
+        }
+        return $parsed
+    }
+
+    proc _asciiCommandName {text mibIndex} {
+        set lowerText [string tolower $text]
+        set directMatches [list]
+
+        if {[dict exists $mibIndex commandsByName]} {
+            foreach commandName [dict keys [dict get $mibIndex commandsByName]] {
+                if {[string first [string tolower $commandName] $lowerText] >= 0} {
+                    lappend directMatches $commandName
+                }
+            }
+        }
+
+        if {[llength $directMatches] == 1} {
+            return [lindex $directMatches 0]
+        }
+        if {[llength $directMatches] > 1} {
+            set bestName ""
+            set bestLength -1
+            foreach commandName $directMatches {
+                set currentLength [string length $commandName]
+                if {$currentLength > $bestLength} {
+                    set bestLength $currentLength
+                    set bestName $commandName
+                }
+            }
+            return $bestName
+        }
+
+        set bestName ""
+        set bestScore 0
+        set tied 0
+        if {[dict exists $mibIndex paramsByCommand]} {
+            dict for {commandName defs} [dict get $mibIndex paramsByCommand] {
+                set score 0
+                foreach def $defs {
+                    set paramName [_paramName $def]
+                    if {[string first [string tolower $paramName] $lowerText] >= 0} {
+                        incr score
+                    }
+                }
+                if {$score > $bestScore} {
+                    set bestScore $score
+                    set bestName $commandName
+                    set tied 0
+                } elseif {$score > 0 && $score == $bestScore} {
+                    set tied 1
+                }
+            }
+        }
+
+        if {$bestScore > 0 && !$tied} {
+            return $bestName
+        }
+        return ""
+    }
+
+    proc _coerceAsciiValue {value} {
+        if {[string is integer -strict $value]} {
+            return $value
+        }
+        if {[regexp {^0x[0-9a-fA-F]+$} $value]} {
+            scan $value %x parsed
+            return $parsed
+        }
+        return $value
+    }
+
     proc _u16be {hi lo} {
         return [expr {(($hi & 0xFF) << 8) | ($lo & 0xFF)}]
     }
@@ -90,10 +230,10 @@ namespace eval egse::protocol {
     proc decodeParamsFromMib {paramsBytes paramDefs} {
         set decoded [dict create]
         foreach def $paramDefs {
-            set name [dict get $def param_name]
-            set offset [dict get $def offset]
-            set length [dict get $def length]
-            set type [dict get $def type]
+            set name [_paramName $def]
+            set offset [_paramOffset $def]
+            set length [_paramLength $def]
+            set type [_paramType $def]
             set end [expr {$offset + $length - 1}]
             if {$end >= [string length $paramsBytes]} {
                 dict set decoded $name "<missing>"
@@ -108,8 +248,8 @@ namespace eval egse::protocol {
     proc encodeParamsFromMib {paramValues paramDefs} {
         set maxEnd -1
         foreach def $paramDefs {
-            set offset [dict get $def offset]
-            set length [dict get $def length]
+            set offset [_paramOffset $def]
+            set length [_paramLength $def]
             set end [expr {$offset + $length - 1}]
             if {$end > $maxEnd} {
                 set maxEnd $end
@@ -121,10 +261,10 @@ namespace eval egse::protocol {
 
         set bytes [string repeat \x00 [expr {$maxEnd + 1}]]
         foreach def $paramDefs {
-            set name [dict get $def param_name]
-            set offset [dict get $def offset]
-            set length [dict get $def length]
-            set type [dict get $def type]
+            set name [_paramName $def]
+            set offset [_paramOffset $def]
+            set length [_paramLength $def]
+            set type [_paramType $def]
 
             if {[dict exists $paramValues $name]} {
                 set value [dict get $paramValues $name]
@@ -236,6 +376,59 @@ namespace eval egse::protocol {
             source_id $sourceId \
             params $params \
                 decoded_values $decodedValues \
+            command_key $key \
+            command_def $commandDef]
+    }
+
+    proc decodeAsciiTcPacket {packetBytes mibIndex} {
+        set sp [decodeSpacePacket $packetBytes]
+        if {[dict get $sp packet_type] != 1} {
+            error "Expected TC packet_type=1"
+        }
+
+        set payload [dict get $sp payload]
+        set payloadText [string trim [string map [list \x00 " " \r "\n"] $payload]]
+        if {$payloadText eq ""} {
+            error "ASCII TC payload is empty"
+        }
+
+        set commandName [_asciiCommandName $payloadText $mibIndex]
+        if {$commandName eq ""} {
+            error "Unable to resolve ASCII TC command from payload"
+        }
+        if {![dict exists $mibIndex commandsByName $commandName]} {
+            error "Resolved ASCII TC command missing from commandsByName: $commandName"
+        }
+
+        set commandDef [dict get $mibIndex commandsByName $commandName]
+        set decodedValues [dict create]
+        set parsedKeyValues [_parseAsciiKeyValues $payloadText]
+        if {[dict exists $mibIndex paramsByCommand $commandName]} {
+            foreach def [dict get $mibIndex paramsByCommand $commandName] {
+                set name [_paramName $def]
+                set normalizedName [_normalizeAsciiKey $name]
+                if {[dict exists $parsedKeyValues $normalizedName]} {
+                    dict set decodedValues $name [_coerceAsciiValue [dict get $parsedKeyValues $normalizedName]]
+                } elseif {[string first [string tolower $name] [string tolower $payloadText]] >= 0} {
+                    dict set decodedValues $name <present>
+                }
+            }
+        }
+
+        set key [format "%s:%s:%s" \
+            [dict get $commandDef apid] \
+            [dict get $commandDef service_type] \
+            [dict get $commandDef subservice]]
+
+        return [dict create \
+            space_packet $sp \
+            pus_version 0 \
+            ack_flags 0 \
+            service_type [dict get $commandDef service_type] \
+            subservice [dict get $commandDef subservice] \
+            source_id 0 \
+            params $payload \
+            decoded_values $decodedValues \
             command_key $key \
             command_def $commandDef]
     }

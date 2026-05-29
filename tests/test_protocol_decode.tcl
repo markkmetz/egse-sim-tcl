@@ -82,4 +82,26 @@ test tc-decode-002 {reject wrong packet type} -body {
     string match {*Expected TC*} $err
 } -result 1
 
+test tc-decode-003 {decode ASCII TC payload by command name} -body {
+    set payload "PING_RF, echo_data=4660"
+    set tc [egse::protocol::encodeSpacePacket \
+        packet_type 1 \
+        apid 100 \
+        sequence_count 10 \
+        payload $payload]
+
+    set decoded [egse::protocol::decodeAsciiTcPacket $tc $mibIndex]
+    list \
+        [dict get [dict get $decoded command_def] command_name] \
+        [dict get $decoded decoded_values echo_data] \
+        [dict get $decoded service_type] \
+        [dict get $decoded subservice]
+} -result {PING_RF 4660 17 1}
+
+test tc-decode-004 {decode binary params from SCOS-style defs} -body {
+    set defs [list [dict create name echo_data bitLength 16 bitOffset 0 type R]]
+    set decoded [egse::protocol::decodeParamsFromMib [binary format cc 18 52] $defs]
+    dict get $decoded echo_data
+} -result 4660
+
 cleanupTests
