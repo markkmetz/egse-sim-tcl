@@ -1,0 +1,3 @@
+#tm_name|apid|service_type|subservice
+THERMAL_SETPOINT_ACK|102|8|2
+THERMAL_PING_ACK|102|8|6

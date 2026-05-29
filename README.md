@@ -55,6 +55,7 @@ Known built-in EGSE files in this repo:
 - `rf`
 - `generic`
 - `powerlab`
+- `thermal`
 
 ## Run tests
 
@@ -81,6 +82,7 @@ Available profile examples:
 - `examples/config/separate_tcp.tcl`
 - `examples/config/combined_tcp.tcl`
 - `examples/config/separate_udp.tcl`
+- `examples/config/thermal_tcp.tcl`
 
 Default sockets:
 - TC TCP server: `localhost:5000`
