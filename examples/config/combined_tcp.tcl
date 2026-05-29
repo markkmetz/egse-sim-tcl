@@ -1,4 +1,5 @@
 set EGSE_CONFIG [dict create \
+    egse_type generic \
     transport_mode combined \
     tc_transport tcp \
     tm_transport tcp \

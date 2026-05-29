@@ -7,8 +7,8 @@ set root [file dirname $here]
 source [file join $root lib egse mib_loader.tcl]
 source [file join $root lib egse protocol.tcl]
 source [file join $root lib egse dispatcher.tcl]
+source [file join $root lib egse egse_registry.tcl]
 source [file join $root lib egse transport.tcl]
-source [file join $root lib egse plugins rf.tcl]
 
 set cfg [dict create \
     transport_mode combined \
@@ -20,7 +20,7 @@ set cfg [dict create \
     tm_port 5700]
 
 set mibIndex [egse::mib::loadMibSet [file join $root examples mibs] generic]
-egse::dispatch::registerHandler rf_ping egse::plugin::rf::action_ping
+egse::registry::activate $root [dict create egse_type generic]
 
 set ::rx ""
 set ::done 0

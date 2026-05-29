@@ -1,6 +1,6 @@
 namespace eval egse::config {
     variable defaultConfig [dict create \
-        egse_type rf \
+        egse_type generic \
         mib_root "examples/mibs" \
         mib_set generic \
         transport_mode separate \

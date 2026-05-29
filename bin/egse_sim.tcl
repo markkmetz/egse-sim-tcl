@@ -8,9 +8,8 @@ source [file join $rootDir lib egse logging.tcl]
 source [file join $rootDir lib egse mib_loader.tcl]
 source [file join $rootDir lib egse protocol.tcl]
 source [file join $rootDir lib egse dispatcher.tcl]
+source [file join $rootDir lib egse egse_registry.tcl]
 source [file join $rootDir lib egse transport.tcl]
-source [file join $rootDir lib egse plugins rf.tcl]
-source [file join $rootDir lib egse plugins power.tcl]
 
 set cfgPath ""
 if {[llength $argv] > 0} {
@@ -18,6 +17,7 @@ if {[llength $argv] > 0} {
 }
 
 set cfg [egse::config::load $cfgPath]
+set cfg [egse::registry::activate $rootDir $cfg]
 
 set mibRoot [dict get $cfg mib_root]
 if {[file pathtype $mibRoot] ne "absolute"} {
@@ -36,9 +36,7 @@ egse::log::init \
     [dict get $cfg log_rotate_files]
 egse::log::event info "egse-start type=[dict get $cfg egse_type] mib_set=$mibSet"
 
-# Register stub action handlers.
-egse::dispatch::registerHandler rf_ping egse::plugin::rf::action_ping
-egse::dispatch::registerHandler psu_set_voltage egse::plugin::power::action_set_voltage
+# Handlers are registered by egse::registry::activate.
 
 proc ::onTcPacket {cfg mibIndex transport endpoint rawPacket} {
     catch {

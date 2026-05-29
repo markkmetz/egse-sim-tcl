@@ -7,13 +7,11 @@ set root [file dirname $here]
 source [file join $root lib egse mib_loader.tcl]
 source [file join $root lib egse protocol.tcl]
 source [file join $root lib egse dispatcher.tcl]
+source [file join $root lib egse egse_registry.tcl]
 source [file join $root lib egse transport.tcl]
-source [file join $root lib egse plugins rf.tcl]
-source [file join $root lib egse plugins power.tcl]
 
 set mibIndex [egse::mib::loadMibSet [file join $root examples mibs] generic]
-egse::dispatch::registerHandler rf_ping egse::plugin::rf::action_ping
-egse::dispatch::registerHandler psu_set_voltage egse::plugin::power::action_set_voltage
+egse::registry::activate $root [dict create egse_type generic]
 
 set ::portBase 5900
 set ::tcSock ""
