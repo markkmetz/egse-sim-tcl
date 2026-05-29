@@ -1,0 +1,3 @@
+#tm_name|param_name|offset|length|type
+PSU_ACK|voltage_mv|0|2|U16
+RF_ACK|echo_data|0|2|U16

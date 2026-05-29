@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "EGSE: Run Simulator",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "tclsh bin/egse_sim.tcl",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "EGSE: Run Tests",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "tclsh tests/run_all.tcl",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

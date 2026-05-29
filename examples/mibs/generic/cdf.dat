@@ -1,0 +1,3 @@
+#command_name|param_name|offset|length|type
+PING_RF|echo_data|0|2|U16
+SET_PSU_VOLTAGE|voltage_mv|0|2|U16
