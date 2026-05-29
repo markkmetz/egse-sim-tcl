@@ -2,6 +2,7 @@ set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 
 set suites [list \
+    [file join $here test_dispatch_listeners.tcl] \
     [file join $here test_mib_loader.tcl] \
     [file join $here test_protocol_decode.tcl] \
     [file join $here test_socket_flow.tcl] \

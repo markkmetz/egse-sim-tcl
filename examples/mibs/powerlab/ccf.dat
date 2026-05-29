@@ -1,3 +1,0 @@
-#command_name|apid|service_type|subservice|action
-SET_PSU_VOLTAGE|101|3|1|psu_set_voltage
-PING_RF|101|17|1|rf_ping

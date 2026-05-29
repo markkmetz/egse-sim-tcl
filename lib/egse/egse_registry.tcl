@@ -1,6 +1,17 @@
 namespace eval egse::registry {
+    proc _egseSearchPaths {rootDir} {
+        return [list [file join $rootDir lib] [file join $rootDir bin]]
+    }
+
     proc _egsePath {rootDir egseType} {
-        return [file join $rootDir lib egse egse_types ${egseType}.tcl]
+        foreach baseDir [_egseSearchPaths $rootDir] {
+            set p [file join $baseDir ${egseType}.tcl]
+            if {[file exists $p]} {
+                return $p
+            }
+        }
+        # Return preferred location for error messages when not found.
+        return [file join $rootDir lib ${egseType}.tcl]
     }
 
     proc activate {rootDir cfg} {
@@ -11,7 +22,7 @@ namespace eval egse::registry {
             if {[llength $known]} {
                 error "Unknown egse_type '$egseType'. Available EGSEs: [join $known {, }]"
             }
-            error "Unknown egse_type '$egseType'. No EGSE files found under lib/egse/egse_types"
+            error "Unknown egse_type '$egseType'. No EGSE files found in lib/ or bin/"
         }
 
         source $egsePath
@@ -38,16 +49,20 @@ namespace eval egse::registry {
     }
 
     proc knownTypes {rootDir} {
-        set egseDir [file join $rootDir lib egse egse_types]
-        if {![file isdirectory $egseDir]} {
-            return {}
-        }
-
         set out {}
-        foreach p [glob -nocomplain -directory $egseDir *.tcl] {
-            lappend out [file rootname [file tail $p]]
+        foreach egseDir [_egseSearchPaths $rootDir] {
+            if {![file isdirectory $egseDir]} {
+                continue
+            }
+            foreach p [glob -nocomplain -directory $egseDir *.tcl] {
+                set basename [file rootname [file tail $p]]
+                # Exclude launcher/demo startup scripts from bin.
+                if {$basename ni {egse_sim esa_tc_demo egse2_demo}} {
+                    lappend out $basename
+                }
+            }
         }
-        return [lsort $out]
+        return [lsort -unique $out]
     }
 }
 

@@ -6,24 +6,24 @@ set root [file dirname $here]
 
 source [file join $root lib egse mib_loader.tcl]
 
-test mib-load-001 {load sample MIB set} -body {
-    set idx [egse::mib::loadMibSet [file join $root examples mibs] generic]
+test mib-load-001 {load SCOS2000 MIB set — known keys present} -body {
+    set idx [egse::mib::loadMibSet [file join $root MIBS] generic]
     list \
-        [dict exists $idx commandByKey 100:17:1] \
-        [dict exists $idx commandByKey 100:3:1] \
-        [llength [dict get $idx tables ccf.dat rows]]
-} -result {1 1 2}
+        [dict exists $idx commandByKey 17:2:1] \
+        [dict exists $idx commandByKey 17:3:1] \
+        [llength [dict keys [dict get $idx commandsByName]]]
+} -result {1 1 139}
 
-test mib-load-002 {command params index is built} -body {
-    set idx [egse::mib::loadMibSet [file join $root examples mibs] generic]
-    llength [dict get $idx paramsByCommand PING_RF]
-} -result 1
+test mib-load-002 {command params index built for S2KTC001} -body {
+    set idx [egse::mib::loadMibSet [file join $root MIBS] generic]
+    llength [dict get $idx paramsByCommand S2KTC001]
+} -result 3
 
-test mib-load-003 {tm indexes and MIB set listing are available} -body {
-    set idx [egse::mib::loadMibSet [file join $root examples mibs] generic]
-    set pos [lsearch -exact [egse::mib::listMibSets [file join $root examples mibs]] generic]
+test mib-load-003 {tm indexes and MIB set listing available} -body {
+    set idx [egse::mib::loadMibSet [file join $root MIBS] generic]
+    set pos [lsearch -exact [egse::mib::listMibSets [file join $root MIBS]] generic]
     list \
-        [dict exists $idx tmByKey 100:17:2] \
+        [dict exists $idx tmByKey 281:3:25] \
         [expr {$pos >= 0}]
 } -result {1 1}
 

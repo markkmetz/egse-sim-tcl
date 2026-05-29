@@ -1,4 +1,26 @@
+# Generic EGSE Type - Configuration and handlers combined
+
 namespace eval ::egse::type::generic {
+    # Configuration defaults for generic EGSE
+    proc config {} {
+        return [dict create \
+            egse_type generic \
+            transport_mode separate \
+            tc_transport tcp \
+            tm_transport tcp \
+            tc_host 127.0.0.1 \
+            tc_port 5000 \
+            tm_host 127.0.0.1 \
+            tm_port 5001 \
+            mib_root "MIBS" \
+            mib_set generic \
+            tc_listener_file "" \
+            log_file "logs/packets.log" \
+            log_rotate_bytes 10485760 \
+            log_rotate_files 5 \
+            log_verbose 1]
+    }
+
     proc settings {} {
         return [dict create \
             mib_set generic \

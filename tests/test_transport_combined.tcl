@@ -19,7 +19,27 @@ set cfg [dict create \
     tm_host 127.0.0.1 \
     tm_port 5700]
 
-set mibIndex [egse::mib::loadMibSet [file join $root examples mibs] generic]
+# Build an in-memory test MIB index matching the APID/service/sub values used below.
+proc _buildTestMibIndex {} {
+    set pingCmd [dict create \
+        command_name PING_RF  apid 100  service_type 17  subservice 1 \
+        description "RF ping"  action rf_ping]
+    set psuCmd [dict create \
+        command_name PSU_SET_VOLTAGE  apid 100  service_type 3  subservice 1 \
+        description "PSU set voltage"  action psu_set_voltage]
+    set pingParam [dict create param_name echo_data  offset 0  length 2  type U16]
+    set psuParam  [dict create param_name voltage_mv offset 0  length 2  type U16]
+    set pingTm [dict create tm_name PING_RF_TM  apid 100  service_type 17  subservice 2]
+    set psuTm  [dict create tm_name PSU_TM      apid 100  service_type 3   subservice 25]
+    return [dict create \
+        commandByKey    [dict create "100:17:1" $pingCmd  "100:3:1" $psuCmd] \
+        commandsByName  [dict create PING_RF $pingCmd  PSU_SET_VOLTAGE $psuCmd] \
+        paramsByCommand [dict create PING_RF [list $pingParam]  PSU_SET_VOLTAGE [list $psuParam]] \
+        tmByKey         [dict create "100:17:2" $pingTm  "100:3:25" $psuTm] \
+        tmByName        [dict create PING_RF_TM $pingTm  PSU_TM $psuTm] \
+        tmParamsByName  [dict create PING_RF_TM [list $pingParam]  PSU_TM [list $psuParam]]]
+}
+set mibIndex [_buildTestMibIndex]
 egse::registry::activate $root [dict create egse_type generic]
 
 set ::rx ""

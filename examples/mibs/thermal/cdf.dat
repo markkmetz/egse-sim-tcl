@@ -1,3 +1,0 @@
-#command_name|param_name|offset|length|type
-SET_THERMAL_SETPOINT|setpoint_cdec|0|2|U16
-PING_THERMAL|echo_data|0|2|U16
