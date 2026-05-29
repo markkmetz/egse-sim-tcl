@@ -106,16 +106,34 @@ proc ::onTcPacket {cfg mibIndex transport endpoint rawPacket} {
             set decoded [egse::protocol::decodeTcPacket $rawPacket $mibIndex]
         } binaryErr]
 
+        puts "DEBUG worker: binary decode rc=$binaryRc"
+        if {$binaryRc == 0} {
+            puts "DEBUG worker: binary decode ok command_def_empty=[expr {[dict get $decoded command_def] eq {}}]"
+        } else {
+            puts "DEBUG worker: binary decode failed err=$binaryErr"
+        }
+
         if {$binaryRc != 0 || [dict get $decoded command_def] eq ""} {
+            puts "DEBUG worker: attempting ASCII decode..."
             set asciiRc [catch {
                 set decoded [egse::protocol::decodeAsciiTcPacket $rawPacket $mibIndex]
             } asciiErr]
+
+            puts "DEBUG worker: ascii decode rc=$asciiRc"
+            if {$asciiRc == 0} {
+                set cmdDef [dict get $decoded command_def]
+                puts "DEBUG worker: ascii decode ok command_def=[expr {$cmdDef ne {} ? [dict get $cmdDef command_name] : {EMPTY}}]"
+            } else {
+                puts "DEBUG worker: ascii decode failed err=$asciiErr"
+            }
 
             if {$asciiRc != 0 && $binaryRc != 0} {
                 error "binary decode failed: $binaryErr ; ascii decode failed: $asciiErr"
             }
         }
 
+        set finalCmdDef [dict get $decoded command_def]
+        puts "DEBUG worker: final command_def=[expr {$finalCmdDef ne {} ? [dict get $finalCmdDef command_name] : {EMPTY}}]"
         egse::log::packet RX $transport $endpoint $rawPacket $decoded
 
         set actionResult [egse::dispatch::handleTc $decoded]
