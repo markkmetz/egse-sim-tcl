@@ -1,0 +1,5 @@
+# Runtime logs
+logs/*.log
+
+# Tcl test temp artifacts
+tests/*.tmp
