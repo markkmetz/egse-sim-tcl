@@ -392,7 +392,20 @@ namespace eval egse::protocol {
             error "ASCII TC payload is empty"
         }
 
+        puts "DEBUG decodeAsciiTcPacket: payload length=[string length $payloadText]"
+        puts "DEBUG decodeAsciiTcPacket: payloadText=<$payloadText>"
+        if {[dict exists $mibIndex commandsByName]} {
+            set cmdNames [dict keys [dict get $mibIndex commandsByName]]
+            puts "DEBUG decodeAsciiTcPacket: available commands: [llength $cmdNames] names"
+            if {[llength $cmdNames] <= 10} {
+                puts "DEBUG decodeAsciiTcPacket: commands: $cmdNames"
+            }
+        } else {
+            puts "DEBUG decodeAsciiTcPacket: commandsByName NOT in mibIndex"
+        }
+
         set commandName [_asciiCommandName $payloadText $mibIndex]
+        puts "DEBUG decodeAsciiTcPacket: resolved commandName=<$commandName>"
         if {$commandName eq ""} {
             error "Unable to resolve ASCII TC command from payload"
         }
